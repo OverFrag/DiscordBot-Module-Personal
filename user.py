@@ -30,29 +30,39 @@ class UserMgmt(Module):
 					'Cannot find any data, please use !help for more information'
 				]
 			else:
-				ql_id = str(user_data[1])
-				req =urllib.request.urlopen('http://qlstats.net:8080/player/'+ql_id+'.json')
-				data = json.loads(req.read().decode('utf-8'))
-				roundKDR = ''
-				msg = [
-					'**QL-Stats**',
-					'Nick : ' + data[0]['player']['nick'],
-					'Last Played : ' + data[0]['overall_stats']['overall']['last_played_fuzzy'],
-					'Kill-Death Ratio : ' + roundKDR,
-					'iFT - ELO : ' + data[0]['elos']['ft']['b_r'].toString().split('.')[0]+' **±** '+data[0]['elos']['ft']['b_rd'].toString().split('.')[0],
-					'iCTF - ELO : ' + data[0]['elos']['ctf']['b_r'].toString().split('.')[0]+' **±** '+data[0]['elos']['ctf']['b_rd'].toString().split('.')[0],
-					'Games played (Wins / Losses) : ' + str(data[0]['games_played']['overall']['games']) + ' (' + str(data[0]['games_played']['overall']['wins']) + '/' + str(data[0]['games_played']['overall']['losses'])  + ' )',
-				]
+				msg = self.__get_qlstats_by_id(user_data[1])
 			await self.container.client.send_message(message.channel, '\n'.join(msg))
 
 		if self.has_command('iam', message):
 			msg = [
 			]
 			await self.container.client.send_message(message.channel, '\n'.join(msg))
+
 	def __get_user_by_id(self,disc_id):
 		cursor = self.container.db.cursor()
 		cursor.execute("SELECT * FROM user WHERE id='%s'" % disc_id)
 		return cursor.fetchone()
+
 	def __get_qlstats_by_id(self,ql_id):
-		#
-		pass
+		req =urllib.request.urlopen('http://qlstats.net:8080/player/'+ql_id+'.json')
+		data = json.loads(req.read().decode('utf-8'))
+		#print(data)
+		roundKDR = str(round(data[0]['overall_stats']['overall']['k_d_ratio'],3))
+		try:
+			ift_elo = 'iFT - ELO : '+str(int(data[0]['elos']['ft']['b_r']))+' **±** '+ str(int(data[0]['elos']['ft']['b_rd']))
+		except KeyError:
+			ift_elo = 'iFT - ELO : No data available'
+		try:
+			ictf_elo = 'iCTF - ELO : '+str(int(data[0]['elos']['ctf']['b_r']))+' **±**'+ str(int(data[0]['elos']['ctf']['b_rd']))
+		except:
+			ictf_elo = 'iCTF - ELO : No data available'
+		msg = [
+			'**QL-Stats**',
+			'Nick : ' + data[0]['player']['nick'],
+			'Last Played : ' + data[0]['overall_stats']['overall']['last_played_fuzzy'],
+			'Kill-Death Ratio : ' + roundKDR,
+			ift_elo,
+			ictf_elo,
+			'Games played (Wins / Losses) : ' + str(data[0]['games_played']['overall']['games']) + ' (' + str(data[0]['games_played']['overall']['wins']) + '/' + str(data[0]['games_played']['overall']['losses'])  + ' )',
+		]
+		return msg
