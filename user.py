@@ -15,7 +15,7 @@ class UserMgmt(Module):
 	def bot(self):
 		#Create if not exist user-table
 		cursor = self.container.db.cursor()
-		cursor.execute('''CREATE TABLE IF NOT EXISTS user ( id CHAR(50) PRIMARY KEY NOT NULL, qlstat_id INT, twitch_account CHAR(50) )''')
+		cursor.execute('''CREATE TABLE IF NOT EXISTS module_user ( discord_id INT PRIMARY KEY NOT NULL, steam_id INT UNIQUE ,qlstat_id INT UNIQUE )''')
 		self.container.db.commit()
 
 	async def on_message(self, message: discord.Message):
@@ -48,10 +48,31 @@ class UserMgmt(Module):
 		if self.has_command('iam', message):
 			msg = [
 			]
-			await self.container.client.send_message(message.channel, '\n'.join(msg))
+			switch_command = self.get_parameters('iam',message)
+			if switch_command[0] == 'qlstats-id':
+				try:
+					ql_id = int(switch_command[1])
+				except ValueError:
+					msg = [
+						'Your QL-Stats ID is not numeric'
+					]
+				else:
+					if ql_id > 1000000:
+						msg = [
+							'Your Ql-Stats ID is out of range'
+						]
+					else:
+						user_data = self.__get_user_by_id(message.author.id)
+						cursor = self.container.db.cursor()
+						if user_data == None:
+							cursor.execute("INSERT INTO user (discord_id, qlstat_id) VALUES (?,?)" , (message.author.id,ql_id ) )
+						else:
+							cursor.execute("UPDATE user SET qlstat_id=? WHERE discord_id="+message.author.id, ql_id)
+				finally:
+					await self.container.client.send_message(message.channel, '\n'.join(msg))
 	def __get_user_by_id(self,disc_id):
 		cursor = self.container.db.cursor()
-		cursor.execute("SELECT * FROM user WHERE id='%s'" % disc_id)
+		cursor.execute("SELECT * FROM user WHERE discord_id=?", disc_id)
 		return cursor.fetchone()
 	def __get_qlstats_by_id(self,ql_id):
 		#
