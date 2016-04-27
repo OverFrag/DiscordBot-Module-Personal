@@ -53,15 +53,33 @@ class UserMgmt(Module):
 						user_data = self.__get_user_by_id(message.author.id)
 						cursor = self.container.db.cursor()
 						if user_data == None:
-							cursor.execute("INSERT INTO user (discord_id, qlstat_id) VALUES (?,?)" , (message.author.id,ql_id ) )
+							try:
+								cursor.execute("INSERT INTO module_user (discord_id, qlstat_id) VALUES (?,?)" , (message.author.id,ql_id ) )
+							except sqlite3.Error as e:
+								msg = [
+									"Error occured while updating userdata: "+str(e)
+								]
+							else:
+								msg = [
+									"Successfully stored your Data"
+								]
 						else:
-							cursor.execute("UPDATE user SET qlstat_id=? WHERE discord_id="+message.author.id, ql_id)
+							try:
+								cursor.execute("UPDATE module_user SET qlstat_id=? WHERE discord_id="+message.author.id, ql_id)
+							except sqlite3.Error as e:
+								msg = [
+									"Error occued while updating userdata: "+str(e)
+								]
+							else:
+								msg = [
+									"Successfully updated your data"
+								]
 				finally:
 					await self.container.client.send_message(message.channel, '\n'.join(msg))
 
 	def __get_user_by_id(self,disc_id):
 		cursor = self.container.db.cursor()
-		cursor.execute("SELECT * FROM user WHERE discord_id=?", disc_id)
+		cursor.execute("SELECT * FROM module_user WHERE discord_id=?", disc_id)
 		return cursor.fetchone()
 
 	def __get_qlstats_by_id(self,ql_id):
